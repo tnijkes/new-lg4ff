@@ -1,5 +1,6 @@
 KVERSION := `uname -r`
 KDIR := /lib/modules/${KVERSION}/build
+OPTIONS := lg4ff_dfgt_altmap
 
 default:
 	$(MAKE) -C $(KDIR) M=$$PWD

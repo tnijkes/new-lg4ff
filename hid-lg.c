@@ -49,6 +49,15 @@
 #define FFG_RDESC_ORIG_SIZE	85
 #define FG_RDESC_ORIG_SIZE	82
 
+/*
+ * F1 2020 on Google Stadia, or perhaps any other game on Google Stadia, does not support more than
+ * the standard 17 buttons on a gamepad-like device.
+ * The extra buttons *do* work in the Chromium browser (check https://gamepad-tester.com), just not in Stadia.
+ * With the module option lg4ff_dfgt_altmap you can map the extra buttons to keyboard events so you can use
+ * them in Stadia.
+ */
+bool lg4ff_dfgt_altmap = 0;
+
 /* Fixed report descriptors for Logitech Driving Force (and Pro)
  * wheel controllers
  *
@@ -584,6 +593,29 @@ static int lg_dinovo_mapping(struct hid_input *hi, struct hid_usage *usage,
 	return 1;
 }
 
+static int lg_driving_force_gt_mapping(struct hid_input *hi, struct hid_usage *usage,
+		unsigned long **bit, int *max)
+{
+	if ((usage->hid & HID_USAGE_PAGE) != HID_UP_BUTTON)
+		return 0;
+
+	switch (usage->hid & HID_USAGE) {
+
+	case 13: lg_map_key_clear(KEY_KPASTERISK);	break;	// 300 ?			Stick shift up
+	case 14: lg_map_key_clear(KEY_KPSLASH);		break;	// 301 ?			Stick shift down
+	case 15: lg_map_key_clear(KEY_KPENTER);		break;	// 302 ?			Red knob center button
+	case 16: lg_map_key_clear(KEY_KPPLUS);		break;	// 303 BTN_DEAD			+ button
+	case 17: lg_map_key_clear(KEY_PAGEDOWN);	break;	// 704 BTN_TRIGGER_HAPPY1	Red knob turn CCW
+	case 18: lg_map_key_clear(KEY_PAGEUP);		break;	// 705 BTN_TRIGGER_HAPPY2	Red knob turn CW
+	case 19: lg_map_key_clear(KEY_KPMINUS);		break;	// 706 BTN_TRIGGER_HAPPY3	- button
+	case 20: lg_map_key_clear(KEY_ESC);		break;	// 707 BTN_TRIGGER_HAPPY4	Horn
+	default:
+		return 0;
+
+	}
+	return 1;
+}
+
 static int lg_wireless_mapping(struct hid_input *hi, struct hid_usage *usage,
 		unsigned long **bit, int *max)
 {
@@ -671,6 +703,11 @@ static int lg_input_mapping(struct hid_device *hdev, struct hid_input *hi,
 	if (hdev->product == USB_DEVICE_ID_DINOVO_MINI &&
 			lg_dinovo_mapping(hi, usage, bit, max))
 		return 1;
+
+	if (hdev->product == USB_DEVICE_ID_LOGITECH_DFGT_WHEEL && lg4ff_dfgt_altmap &&
+			lg_driving_force_gt_mapping(hi, usage, bit, max)) {
+				return 1;
+	}
 
 	if ((drv_data->quirks & LG_WIRELESS) && lg_wireless_mapping(hi, usage, bit, max))
 		return 1;
@@ -953,6 +990,9 @@ static struct hid_driver lg_driver = {
 	.remove = lg_remove,
 };
 module_hid_driver(lg_driver);
+
+module_param_named(lg4ff_dfgt_altmap, lg4ff_dfgt_altmap, bool, S_IRUGO);
+MODULE_PARM_DESC(lg4ff_dfgt_altmap, "Use alternative button to keyboard mapping for Driving Force GT");
 
 #ifdef CONFIG_LOGIWHEELS_FF
 int lg4ff_no_autoswitch = 0;
